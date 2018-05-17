@@ -1,0 +1,31 @@
+Identifier = "FragInspector"
+Name = "FragInspector"
+Description = "Inspects planar fragments"
+Author = "Nolocalreality"
+Version = "0.1"
+Email = "hi@you"
+
+Environment = "4.4"
+
+RunOnStartup = {
+  "FragUI.lua",
+  "Main.lua",
+  "Utilities.lua",
+  "message.lua",
+  "Button.lua",
+  
+}
+
+Embed = {
+	LibExtendedWidgets = true,
+    LibString = true,
+}
+
+Dependencies = {
+	LibExtendedWidgets = {"required", "before"},
+    LibString = {"required", "before"},
+}
+
+SavedVariables = {
+	FI_Settings = "character",
+}
