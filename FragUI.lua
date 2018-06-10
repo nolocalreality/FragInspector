@@ -13,12 +13,12 @@ local icon = {
     water = [[Data\UI\item_icons\fatestone_09_blue.dds]],
 }
 
-local rarity = {
-    [2] = "icon_border.png",
-    [3] = "icon_border_uncommon.dds",
-    [4] = "icon_border_rare.dds",
-    [5] = "icon_border_epic.dds",
-    [6] = "icon_border_relic.dds",  
+local rarityIcon = {
+    [2] = "UI/icon_border.png",
+    [3] = "UI/icon_border_uncommon.dds",
+    [4] = "UI/icon_border_rare.dds",
+    [5] = "UI/icon_border_epic.dds",
+    [6] = "UI/icon_border_relic.dds",  
 }
 
 local titles = {
@@ -48,17 +48,19 @@ toolTip:SetFontSize(14)
 function Library.LibFragUI.Create(name, parent, element)
 
     local FragUI = UI.CreateFrame("Frame", name, parent)
-    FragUI.Rarity = UI.CreateFrame("Texture", name .. "Rarity", FragUI)
+    FragUI.RarityFrame = UI.CreateFrame("Texture", name .. "RarityFrame", FragUI)
     FragUI.Item = UI.CreateFrame("Texture", name .. "Item", FragUI)
     FragUI.Highlight = UI.CreateFrame("Texture", name .. "Highlight", FragUI)
     FragUI:SetHeight(48)
     FragUI:SetWidth(48)
-    FragUI.Rarity:SetAllPoints(FragUI)
+    
     FragUI.Item:SetAllPoints(FragUI)
     FragUI.Highlight:SetPoint("TOPLEFT", FragUI, "TOPLEFT", -8 ,-8)
+    FragUI.RarityFrame:SetPoint("TOPLEFT", FragUI, "TOPLEFT", -8 ,-8)
+    FragUI.RarityFrame:SetHeight(64)
     
     FragUI.Highlight:SetLayer(FragUI:GetLayer() + 3)
-    FragUI.Rarity:SetLayer(FragUI:GetLayer() + 2)
+    FragUI.RarityFrame:SetLayer(FragUI:GetLayer() + 2)
     FragUI.Item:SetLayer(FragUI:GetLayer() +1)
     
     FragUI.Highlight:SetTexture("FragInspector", "UI/icon_border_(over)_fill.png")
@@ -71,6 +73,7 @@ function Library.LibFragUI.Create(name, parent, element)
 
     FragUI.mainStat = "unknown"
     FragUI.level = 0
+    FragUI.rarity = 2
     
     FragUI.stats = {
         dexterity = 0,
@@ -111,12 +114,14 @@ function Library.LibFragUI.Create(name, parent, element)
     
     
     function FragUI.SetRarity(self, rare)
-        if rarity[rare] then 
-            self.Rarity:SetTexture("FragInspector", rarity[rare])
-            self.Rarity:SetVisible(true)
+        rare = tonumber(rare)
+        if rarityIcon[rare] then 
+            self.RarityFrame:SetTexture("FragInspector", rarityIcon[rare])
+            self.RarityFrame:SetVisible(true)
         else
-            self.Rarity:SetVisible(false)
-        end      
+            self.RarityFrame:SetVisible(false)
+        end  
+        self.rarity = rare
     end
     
     function FragUI.ProcessTable(self, fragTable)
@@ -148,21 +153,26 @@ function Library.LibFragUI.Create(name, parent, element)
         local statText = ""
         
         if self.stats[self.mainStat] then
-           mainStatText = self.mainStat .. " +" ..  self.stats[self.mainStat]
-        end
+           mainStatText = Utilities:prettyStatName(self.mainStat) .. " +" ..  self.stats[self.mainStat]
         
-        for k,v in pairs(self.stats) do
-           if k ~= self.mainStat and v ~= 0 then
-                if statText ~= "" then  --not the first entry
-                    statText = statText .. "\n"
+
+            for k,v in pairs(self.stats) do
+               if k ~= self.mainStat and v ~= 0 then
+                    if statText ~= "" then  --not the first entry
+                        statText = statText .. "\n"
+                    end
+                    statText = statText .. Utilities:prettyStatName(k) .. " +" .. v
                 end
-                statText = statText .. k .. " +" .. v
+
             end
-            
+
+
+            tempText = Utilities:colorByRarity("Level " .. self.level, self.rarity) .. "\n" 
+            tempText = tempText .. Utilities:colorByRarity(mainStatText, self.rarity) .. "\n"
+            tempText = tempText .. statText
+        else 
+            tempText = "No fragment equipped"
         end
-        
-        
-        tempText = "Level " .. self.level .. "\n" .. mainStatText .. "\n" .. statText
         
         return tempText
     end 
@@ -175,6 +185,17 @@ function Library.LibFragUI.Create(name, parent, element)
     function FragUI.MouseOut(self)
         self.Highlight:SetVisible(false)
         toolTip:Hide(self.Highlight)
+    end
+    
+    function FragUI.Reset(self)
+        for k,v in pairs(FragUI.stats) do
+            v = 0
+        end
+    
+        FragUI:SetMainStat("unknown")
+        FragUI:SetRarity(2)
+        FragUI:SetLevel(0)
+    
     end
 
     FragUI:EventAttach(Event.UI.Input.Mouse.Cursor.In, function(self, h) FragUI.MouseIn(self) end, "FragUIMouseIn")

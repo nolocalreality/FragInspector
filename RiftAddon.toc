@@ -12,7 +12,6 @@ RunOnStartup = {
   "Main.lua",
   "Utilities.lua",
   "message.lua",
-  "Button.lua",
   
 }
 

@@ -1,7 +1,7 @@
 local addon, FragInspector = ...
 
 FI_Settings = FI_Settings or {}
-
+FI_Settings.Debug = false
 
 
 FragInspector.context = UI.CreateContext("FragInspector")
@@ -16,7 +16,7 @@ window:SetVisible(false)
 local function init() 
     
     window:SetVisible(false)
-    window:SetHeight(600)
+    window:SetHeight(540)
     window:SetWidth(600)
     window:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 800, 100)
     window:SetTitle("FragInspector")
@@ -94,8 +94,35 @@ local function init()
     window.watericon:SetPoint("TOPLEFT", window.water1, "TOPRIGHT", 15, 15)
     window.watericon:SetTexture("FragInspector", "UI/attribute_water.png")    
 
-        
     
+    
+    window.userList = UI.CreateFrame("SimpleSelect", "userlist", window)
+    window.userList:SetPoint("TOPRIGHT", window, "TOPRIGHT", -220, 70)
+    function  window.userList.Event:ItemSelect(item, value, index)
+        FragInspector.FillFragUI(FragInspector.ExpandStats(value))
+    end
+    
+    window.refreshButton = UI.CreateFrame("RiftButton", "refreshButton", window)
+    window.refreshButton:SetText("Refresh")
+    window.refreshButton:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -50, -50)
+    
+    function window.refreshButton.Event:LeftPress()
+        FragInspector.GetUsers()
+    end
+    
+    function FragInspector.RefreshUserList(userList)
+        local userArray = {}
+        local dataArray = {}
+        for k,v in pairs(userList) do
+            userArray[#userArray +1] = k 
+            dataArray[#dataArray +1] = v     
+        end
+        
+        window.userList:SetItems(userArray, dataArray)
+        window.userList:ResizeToFit()
+    end
+    
+
     
     
     ------ Testing-----------
@@ -103,6 +130,7 @@ local function init()
     window.testButton = UI.CreateFrame("RiftButton", "testButton", window)
     window.testButton:SetText("TEST")
     window.testButton:SetPoint("BOTTOMLEFT", window, "BOTTOMLEFT", 50,-50)
+    window.testButton:SetVisible(FI_Settings.Debug)
     
     function window.testButton.Event:LeftPress()
         
@@ -120,7 +148,11 @@ local function init()
 --        window.fire1:ProcessTable(tempRes[2])
         
         FragInspector.GetUsers()
-    
+        local tempStr = FragInspector.CondenseAllFrags()
+        local tempAr = string.split(tempStr, "@")
+        for i = 1, #tempAr do print("i=" .. i .. "  " .. tempAr[i]) end
+        local tempRes = FragInspector.ExpandStats(tempStr)
+        FragInspector.FillFragUI(tempRes)
     end
     
     -------------------------
@@ -132,17 +164,91 @@ end
 init()
 
 
-local function showWindow()
+function FragInspector.FillFragUI(fragTable)
+
+    local fElem = {
+        [1] = { 
+            elem = "earth",
+            [1] = false,
+            [2] = false
+        },
+        [2] = {
+            elem = "air",
+            [1] = false,
+            [2] = false
+        },
+        [3] = { 
+            elem = "fire",
+            [1] = false,
+            [2] = false
+        },
+        [5] = {            
+            elem = "water",
+            [1] = false,
+            [2] = false
+        },
+        [6] = {        
+            elem = "life",
+            [1] = false,
+            [2] = false
+        },
+        [7] = {             
+            elem = "death",
+            [1] = false,
+            [2] = false
+        },
+    }
     
-    local tempFrag = Inspect.Item.Detail("seqp.f01")
-    if tempFrag then
-    
+    for i = 1, #fragTable do
+       
+        if fragTable[i] and fragTable[i].fragmentAffinity then        
+            if fElem[tonumber(fragTable[i].fragmentAffinity)][1] then
+                window[fElem[tonumber(fragTable[i].fragmentAffinity)].elem .. "2"]:ProcessTable(fragTable[i])
+                --print(fElem[fragTable[i].fragmentAffinity].elem .. "2")
+            else
+                window[fElem[tonumber(fragTable[i].fragmentAffinity)].elem .. "1"]:ProcessTable(fragTable[i]) 
+                fElem[tonumber(fragTable[i].fragmentAffinity)][1] = true
+                --print(fElem[fragTable[i].fragmentAffinity].elem .. "1")
+            end
+        end
+            
     end
+
     
     
+end
+
+function FragInspector.ResetFragUI()
+    
+    window.air1:Reset() 
+    window.air2:Reset()
+    window.death1:Reset() 
+    window.death2:Reset()
+    window.earth1:Reset() 
+    window.earth2:Reset()
+    window.fire1:Reset() 
+    window.fire2:Reset()
+    window.life1:Reset() 
+    window.life2:Reset()
+    window.water1:Reset() 
+    window.water2:Reset()
+      
+end
+
+local function showWindow()
+        
+    FragInspector.GetUsers()
     window:SetVisible(true)
 
 end
 
+local function toggleDebug()
+    
+    FI_Settings.Debug = not FI_Settings.Debug
+    window.testButton:SetVisible(FI_Settings.Debug)
+    
+end
+
 
 table.insert(Command.Slash.Register("fi"), {showWindow, "FragInspector", "Slash command"})
+table.insert(Command.Slash.Register("fidebug"), {toggleDebug, "FragInspector", "Slash command"})

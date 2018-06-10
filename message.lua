@@ -1,6 +1,7 @@
 local addon, FragInspector = ...
 
 local Userlist = {}
+local myFrags
 
 --- mainStat    3 chars                     1
 --- affinity    1   (element)               4
@@ -11,6 +12,23 @@ local Userlist = {}
 
  
 -- takes a fragment table from inspect.item.detail
+function FragInspector.CondenseAllFrags()
+
+    local tempFrag
+    local tempStr = ""
+    
+    for i = 1, 11 do
+        tempFrag = Inspect.Item.Detail("seqp.f" .. string.format("%02d",i))  --leading 0 on slot ids
+        if tempFrag then
+            tempStr = tempStr .. "@" .. FragInspector.CondenseStats(tempFrag)
+        end
+    end       
+    
+    return tempStr
+    
+end
+
+
 function FragInspector.CondenseStats(frag)
     
     local titles = {
@@ -114,6 +132,9 @@ function FragInspector.ExpandStats(fragStr)
     }
     
     
+    if (string.sub(fragStr, 1, 2) == "FI") or (string.sub(fragStr, 1, 2) == "fi")  then
+        fragStr = string.sub(fragStr, 3, -1)
+    end
     
     local fragArray = string.split(fragStr, "@")
     local fragTable = {}
@@ -122,31 +143,25 @@ function FragInspector.ExpandStats(fragStr)
     
     for i =1, #fragArray do
         
-        if string.len(fragArray[i]) < 11  then break end
+        if string.len(fragArray[i]) < 11  then
+            --skip      
+        else
         
-        fragResult[i] = {}
-        
-        fragTable = string.split(fragArray[i], "#")
-        
-        fragResult[i].mainStat = titles[string.sub(fragTable[1], 1, 3)]   
-        fragResult[i].fragmentAffinity = string.sub(fragTable[1], 4, 4)
-        fragResult[i].infusionLevel = tonumber(string.sub(fragTable[1], 5, 6)) or 0
-        fragResult[i].rarity = string.sub(fragTable[1], 7, 7)
+            fragResult[i] = {}
 
-        fragResult[i].stats = {}
-        for j = 2, #fragTable do
-            fragResult[i].stats[titles[string.sub(fragTable[j], 1, 3)]] = string.sub(fragTable[j], 4, -1)      
-        end
-        
---        print("ms=" .. fragResult[i].mainStat .. ",  fA=" ..  fragResult[i].fragmentAffinity .. ", iL=" .. fragResult[i].infusionLevel ..  ", r=" .. fragResult[i].rarity)
---        
---        for k,v in pairs(fragResult[i].stats) do
---            print(k .. "= " .. v)    
---        end
-        
+            fragTable = string.split(fragArray[i], "#")
 
+            fragResult[i].mainStat = titles[string.sub(fragTable[1], 1, 3)]   
+            fragResult[i].fragmentAffinity = string.sub(fragTable[1], 4, 4)
+            fragResult[i].infusionLevel = tonumber(string.sub(fragTable[1], 5, 6)) or 0
+            fragResult[i].rarity = string.sub(fragTable[1], 7, 7)
+
+            fragResult[i].stats = {}
+            for j = 2, #fragTable do
+                fragResult[i].stats[titles[string.sub(fragTable[j], 1, 3)]] = string.sub(fragTable[j], 4, -1)      
+            end
         
-        
+        end    
     end
     
     return fragResult
@@ -154,38 +169,46 @@ function FragInspector.ExpandStats(fragStr)
 end
 
 
+
+
+
 function FragInspector.GetUsers()
 	local message = "Discovering"
-	
+	ResetUserList()
 	Command.Message.Broadcast("guild", nil, "FragInspector", message, function(failure, message) end)
 	Command.Message.Broadcast("yell", nil, "FragInspector", message, function(failure, message) end)
 end
 
-function FragInspector.AddUser(user)
-    if Userlist[user] then return end
+function FragInspector.AddUser(user, data)
     
-    Userlist[user] = true
-    RefreshUserList()
+    Userlist[user] = data
+    FragInspector.RefreshUserList(Userlist)
 
-    print("found user: ".. user)
 end
 
-function RefreshUserList()
-    
-    
+
+
+function ResetUserList()
+    Userlist = {}
+    FragInspector.RefreshUserList(Userlist)
 end
 
 
 function FragInspector.MessageHandler(handle, from, type, channel, identifier, data)
 
     if identifier ~= "FragInspector" then return end
-	if from == Inspect.Unit.Detail("player").name then return end
+	--if from == Inspect.Unit.Detail("player").name then return end
     
     if data == "Discovering" then
-        Command.Message.Send(from, "FragInspector", "Available", function(failure, message) end)
-    elseif data == "Available" then
-        FragInspector.AddUser(from)
-    
+        myFrags = FragInspector.CondenseAllFrags()
+        Command.Message.Send(from, "FragInspector", "FI" .. myFrags, function(failure, message) end)
+    elseif data == "Inspecting" then
+        myFrags = FragInspector.CondenseAllFrags()
+        Command.Message.Send(from, "FragInspector", "fi" .. myFrags, function(failure, message) end)
+    elseif string.sub(data, 1, 2) == "FI" then
+        FragInspector.AddUser(from, string.sub(data, 3, -1))
+    elseif string.sub(data, 1, 2) == "fi" then
+        FragInspector.AddUser(from, string.sub(data, 3, -1))
     end
     
 end
